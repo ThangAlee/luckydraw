@@ -26,6 +26,17 @@ const Settings: React.FC<SettingsProps> = ({
   const [newName, setNewName] = useState('');
   const [newPrizeName, setNewPrizeName] = useState('');
   const [newPrizeWeight, setNewPrizeWeight] = useState(1);
+  const [urlInput, setUrlInput] = useState(backgroundImage && !backgroundImage.startsWith('data:') ? backgroundImage : '');
+
+  // Hàm chuyển đổi link Google Drive sang link trực tiếp
+  const convertDriveLink = (url: string) => {
+    const driveRegex = /\/file\/d\/(.+?)\/(view|edit|preview)/;
+    const match = url.match(driveRegex);
+    if (match && match[1]) {
+      return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+    }
+    return url;
+  };
 
   const addParticipant = () => {
     if (!newName.trim()) return;
@@ -54,8 +65,17 @@ const Settings: React.FC<SettingsProps> = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         setBackgroundImage(reader.result as string);
+        setUrlInput('');
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const applyUrlBg = () => {
+    if (urlInput.trim()) {
+      const directUrl = convertDriveLink(urlInput.trim());
+      setBackgroundImage(directUrl);
+      setUrlInput(directUrl); // Cập nhật lại input để người dùng thấy link đã đổi
     }
   };
 
@@ -82,39 +102,66 @@ const Settings: React.FC<SettingsProps> = ({
     <div className="flex flex-col gap-8 w-full max-w-6xl p-4">
       
       {/* Theme Setting */}
-      <div className="bg-white/90 backdrop-blur-md p-6 rounded-2xl shadow-xl border-t-4 border-blue-500">
+      <div className="bg-white/95 backdrop-blur-md p-6 rounded-2xl shadow-xl border-t-4 border-blue-500">
         <h2 className="text-2xl font-bold mb-4 text-blue-800 border-b pb-2 flex items-center gap-2">
-          <span>🖼️</span> Giao diện & Bong bóng
+          <span>🖼️</span> Giao diện & Ảnh nền
         </h2>
         
         <div className="space-y-6">
-          {/* Background Upload */}
-          <div className="flex flex-col md:flex-row gap-6 items-center border-b border-gray-100 pb-6">
+          <div className="flex flex-col gap-4 border-b border-gray-100 pb-6">
             <div className="flex-1 w-full">
-              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">Hình nền chủ đạo</label>
-              <div className="flex gap-4">
+              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Dán Link ảnh nền (Hỗ trợ Google Drive)</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder="Dán link Google Drive hoặc link ảnh tại đây..."
+                  className="flex-1 px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                />
+                <button 
+                  onClick={applyUrlBg}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-bold whitespace-nowrap"
+                >
+                  Áp dụng
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-2 italic">
+                * Lưu ý: Nếu dùng Google Drive, hãy đảm bảo file đã được chỉnh chế độ <b>"Bất kỳ ai có đường liên kết đều có thể xem"</b>.
+              </p>
+            </div>
+
+            <div className="flex-1 w-full">
+              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Hoặc Tải ảnh từ máy tính</label>
+              <div className="flex gap-4 items-center">
                 <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-4 hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-all">
-                  <span className="text-blue-600 font-medium">Tải ảnh nền...</span>
+                  <span className="text-blue-600 font-medium text-sm">Chọn file ảnh...</span>
                   <input type="file" accept="image/*" className="hidden" onChange={handleBgUpload} />
                 </label>
                 <button 
-                  onClick={() => setBackgroundImage(null)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition font-medium"
+                  onClick={() => { setBackgroundImage(null); setUrlInput(''); }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition font-medium text-sm"
                 >
-                  Mặc định
+                  Xóa ảnh
                 </button>
               </div>
             </div>
+            
             {backgroundImage && (
-              <div className="w-full md:w-32 h-20 rounded-lg overflow-hidden border-2 border-white shadow-md">
-                <img src={backgroundImage} alt="Background Preview" className="w-full h-full object-cover" />
+              <div className="mt-2 p-2 bg-gray-50 rounded-lg flex items-center gap-4 border">
+                <div className="w-16 h-10 rounded overflow-hidden border bg-gray-200">
+                  <img src={backgroundImage} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex flex-col overflow-hidden">
+                   <span className="text-[10px] text-green-600 font-bold uppercase">Đang áp dụng:</span>
+                   <span className="text-[11px] text-gray-600 truncate max-w-md">{backgroundImage.startsWith('data:') ? 'Ảnh tải lên từ máy' : backgroundImage}</span>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Bubble Uploads */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide">5 Bong bóng hình ảnh bay bổng</label>
+            <label className="block text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide">5 Bong bóng hình ảnh cá nhân</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
               {bubbleImages.map((img, idx) => (
                 <div key={idx} className="flex flex-col items-center gap-2">
@@ -129,7 +176,7 @@ const Settings: React.FC<SettingsProps> = ({
                   {img && (
                     <button onClick={() => resetBubble(idx)} className="text-[10px] text-red-500 font-bold hover:underline">Xóa</button>
                   )}
-                  <span className="text-[10px] text-gray-400 font-medium uppercase">Vị trí {idx + 1}</span>
+                  <span className="text-[10px] text-gray-400 font-medium uppercase">Ảnh {idx + 1}</span>
                 </div>
               ))}
             </div>
@@ -138,10 +185,9 @@ const Settings: React.FC<SettingsProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Participants List */}
-        <div className="bg-white/90 backdrop-blur-md p-6 rounded-2xl shadow-xl border-t-4 border-red-500">
+        <div className="bg-white/95 backdrop-blur-md p-6 rounded-2xl shadow-xl border-t-4 border-red-500">
           <h2 className="text-2xl font-bold mb-4 text-red-800 border-b pb-2 flex items-center gap-2">
-            <span>👥</span> Danh sách người tham gia ({participants.length})
+            <span>👥</span> Người tham gia ({participants.length})
           </h2>
           <div className="flex gap-2 mb-4">
             <input
@@ -149,81 +195,55 @@ const Settings: React.FC<SettingsProps> = ({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addParticipant()}
-              placeholder="Nhập tên..."
-              className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="Tên đồng nghiệp..."
+              className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
             />
-            <button
-              onClick={addParticipant}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-            >
-              Thêm
-            </button>
+            <button onClick={addParticipant} className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold">Thêm</button>
           </div>
-          <div className="max-h-60 overflow-y-auto space-y-2">
+          <div className="max-h-60 overflow-y-auto space-y-1 pr-2">
             {participants.map(p => (
-              <div key={p.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-md hover:bg-gray-100 transition">
-                <span className="font-medium text-gray-700">{p.name}</span>
-                <button
-                  onClick={() => removeParticipant(p.id)}
-                  className="text-red-500 hover:text-red-700 p-1"
-                >
-                  ✕
-                </button>
+              <div key={p.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg hover:bg-red-50 transition border border-transparent hover:border-red-200">
+                <span className="font-semibold text-gray-700">{p.name}</span>
+                <button onClick={() => removeParticipant(p.id)} className="text-red-400 hover:text-red-700 text-xl font-bold px-2">✕</button>
               </div>
             ))}
-            {participants.length === 0 && <p className="text-gray-400 italic text-center py-4">Chưa có người tham gia</p>}
           </div>
         </div>
 
-        {/* Prizes List */}
-        <div className="bg-white/90 backdrop-blur-md p-6 rounded-2xl shadow-xl border-t-4 border-yellow-500">
+        <div className="bg-white/95 backdrop-blur-md p-6 rounded-2xl shadow-xl border-t-4 border-yellow-500">
           <h2 className="text-2xl font-bold mb-4 text-yellow-800 border-b pb-2 flex items-center gap-2">
-            <span>🎁</span> Danh sách phần quà ({prizes.length})
+            <span>🎁</span> Cơ cấu giải thưởng ({prizes.length})
           </h2>
-          <div className="flex flex-col gap-2 mb-4">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newPrizeName}
-                onChange={(e) => setNewPrizeName(e.target.value)}
-                placeholder="Tên phần quà..."
-                className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              />
-              <button
-                onClick={addPrize}
-                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition"
-              >
-                Thêm
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">Tỉ lệ (Weight):</label>
+          <div className="flex flex-col gap-3 mb-4">
+            <input
+              type="text"
+              value={newPrizeName}
+              onChange={(e) => setNewPrizeName(e.target.value)}
+              placeholder="Tên giải thưởng..."
+              className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none"
+            />
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-bold text-gray-600 whitespace-nowrap">Độ ưu tiên:</label>
               <input
                 type="number"
                 value={newPrizeWeight}
                 onChange={(e) => setNewPrizeWeight(Number(e.target.value))}
                 min="1"
-                max="100"
-                className="w-20 px-4 py-1 border rounded-lg"
+                className="w-full px-4 py-2 border rounded-lg outline-none"
               />
+              <button onClick={addPrize} className="px-8 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-bold">Thêm</button>
             </div>
           </div>
-          <div className="max-h-60 overflow-y-auto space-y-2">
+          <div className="max-h-60 overflow-y-auto space-y-1 pr-2">
             {prizes.map(p => (
-              <div key={p.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-md hover:bg-gray-100 transition">
-                <div>
-                  <span className="font-medium text-gray-700">{p.name}</span>
-                  <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">TL: {p.weight}</span>
+              <div key={p.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg hover:bg-yellow-50 transition border border-transparent hover:border-yellow-200">
+                <div className="flex flex-col">
+                  <span className="font-bold text-gray-700">{p.name}</span>
+                  <span className="text-[10px] text-yellow-600 font-bold uppercase">Trọng số: {p.weight}</span>
                 </div>
-                <button
-                  onClick={() => removePrize(p.id)}
-                  className="text-red-500 hover:text-red-700 p-1"
-                >
-                  ✕
-                </button>
+                <button onClick={() => removePrize(p.id)} className="text-red-400 hover:text-red-700 text-xl font-bold px-2">✕</button>
               </div>
             ))}
-            {prizes.length === 0 && <p className="text-gray-400 italic text-center py-4">Chưa có phần quà</p>}
           </div>
         </div>
       </div>

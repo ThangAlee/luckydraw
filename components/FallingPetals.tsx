@@ -39,13 +39,13 @@ const FallingPetals: React.FC = () => {
       reset() {
         this.x = Math.random() * canvas!.width;
         this.y = -20;
-        this.size = Math.random() * 8 + 5;
+        this.size = Math.random() * 6 + 4;
         this.speedX = Math.random() * 2 - 1;
-        this.speedY = Math.random() * 1.5 + 1;
+        this.speedY = Math.random() * 1.5 + 0.8;
         this.rotation = Math.random() * 360;
         this.rotationSpeed = Math.random() * 2 - 1;
-        // Randomly pick between cherry blossom (pink) and apricot (yellow)
-        this.color = Math.random() > 0.5 ? '#FFC0CB' : '#FFEE58'; 
+        // Đỏ VinFast (#E31837) và Vàng pháo hoa (#FFD700)
+        this.color = Math.random() > 0.6 ? '#E31837' : '#FFD700'; 
       }
 
       update() {
@@ -64,8 +64,8 @@ const FallingPetals: React.FC = () => {
         ctx.translate(this.x, this.y);
         ctx.rotate((this.rotation * Math.PI) / 180);
         ctx.fillStyle = this.color;
+        ctx.globalAlpha = 0.7;
         
-        // Draw a simple petal shape
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.bezierCurveTo(-this.size, -this.size, -this.size, this.size, 0, this.size * 1.5);
@@ -77,7 +77,7 @@ const FallingPetals: React.FC = () => {
 
     const init = () => {
       particles = [];
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 60; i++) {
         particles.push(new Petal());
       }
     };
@@ -103,7 +103,7 @@ const FallingPetals: React.FC = () => {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed top-0 left-0 w-full h-full pointer-events-none z-0"
+      className="fixed top-0 left-0 w-full h-full pointer-events-none z-10"
     />
   );
 };
