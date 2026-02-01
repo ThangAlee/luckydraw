@@ -79,7 +79,7 @@ const App: React.FC = () => {
             HV SYSTEM TEAM
           </h1>
           <p className="text-3xl md:text-5xl font-tet text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] -mt-2 mb-4">
-            Year End Party 2026
+            Year End Party 2025
           </p>
           <div className="flex flex-col items-center gap-1 text-white font-bold tracking-widest text-sm md:text-lg">
              <div className="px-6 py-1 bg-red-600/80 rounded-full border border-yellow-400/50 shadow-lg">
