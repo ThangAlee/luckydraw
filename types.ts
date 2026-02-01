@@ -17,3 +17,4 @@ export interface SpinResult {
 }
 
 export type TabType = 'wheel' | 'settings';
+export type DisplayMode = 'wheel' | 'slot';

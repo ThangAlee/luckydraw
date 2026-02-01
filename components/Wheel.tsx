@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Participant, Prize } from '../types';
 import { TET_COLORS } from '../constants';
+import { audioService } from '../services/audioService';
 
 interface WheelProps {
   participants: Participant[];
@@ -13,8 +14,9 @@ const Wheel: React.FC<WheelProps> = ({ participants, prizes, onSpinEnd }) => {
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const lastTickRotationRef = useRef(0);
 
-  const listToUse = participants.length > 0 ? participants : [{ id: 'none', name: 'Thêm tên!' }];
+  const listToUse = participants.length > 0 ? participants : [{ id: 'none', name: 'Trống!' }];
 
   useEffect(() => {
     drawWheel();
@@ -47,40 +49,30 @@ const Wheel: React.FC<WheelProps> = ({ participants, prizes, onSpinEnd }) => {
       ctx.beginPath();
       ctx.moveTo(center, center);
       ctx.arc(center, center, radius, startAngle, endAngle);
-      
-      // Độ trong suốt 0.4 giúp nhìn rõ dàn xe VinFast phía sau
-      ctx.fillStyle = hexToRgba(TET_COLORS[i % TET_COLORS.length], 0.4);
+      ctx.fillStyle = hexToRgba(TET_COLORS[i % TET_COLORS.length], 0.6);
       ctx.fill();
-      
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; 
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'; 
+      ctx.lineWidth = 2;
       ctx.stroke();
 
       ctx.save();
       ctx.translate(center, center);
       ctx.rotate(startAngle + sliceAngle / 2);
       ctx.textAlign = 'right';
-      
-      // Shadow cực đậm cho chữ để nổi bật trên nền xe/pháo hoa
-      ctx.shadowBlur = 15;
+      ctx.shadowBlur = 10;
       ctx.shadowColor = '#000000';
-      ctx.shadowOffsetX = 2;
-      ctx.shadowOffsetY = 2;
-      
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 22px Quicksand';
       ctx.fillText(item.name, radius - 30, 8);
       ctx.restore();
     });
 
-    // Viền vàng sang trọng cho vòng quay
     ctx.beginPath();
     ctx.arc(center, center, radius, 0, 2 * Math.PI);
     ctx.strokeStyle = '#FFD700';
     ctx.lineWidth = 8;
     ctx.stroke();
 
-    // Tâm vòng quay
     ctx.beginPath();
     ctx.arc(center, center, 30, 0, 2 * Math.PI);
     ctx.fillStyle = '#FFD700';
@@ -88,37 +80,50 @@ const Wheel: React.FC<WheelProps> = ({ participants, prizes, onSpinEnd }) => {
     ctx.strokeStyle = '#FFFFFF';
     ctx.lineWidth = 4;
     ctx.stroke();
-    
-    // Logo "V" hoặc chấm đỏ ở tâm
-    ctx.beginPath();
-    ctx.arc(center, center, 6, 0, 2 * Math.PI);
-    ctx.fillStyle = '#8b0000';
-    ctx.fill();
   };
 
   const spin = () => {
     if (isSpinning || participants.length === 0 || prizes.length === 0) return;
     setIsSpinning(true);
-    const spinDegrees = 1800 + Math.random() * 2000;
-    const duration = 5000;
+    
+    const spinDegrees = 2500 + Math.random() * 3000;
+    const duration = 6000;
     const start = performance.now();
+    const sliceAngleDeg = 360 / listToUse.length;
+    lastTickRotationRef.current = rotation;
+
     const animate = (time: number) => {
       const elapsed = time - start;
       const progress = Math.min(elapsed / duration, 1);
-      const easeOut = (t: number) => 1 - Math.pow(1 - t, 4); // Cảm giác quay mượt hơn
+      const easeOut = (t: number) => 1 - Math.pow(1 - t, 4);
       const currentRotation = rotation + spinDegrees * easeOut(progress);
+      
+      // Top pointer is at 270 degrees.
+      // We calculate current slice index pointing to the pointer
+      const normalizedRotation = (currentRotation % 360 + 360) % 360;
+      const pointingAt = (360 - normalizedRotation + 270) % 360;
+      const currentSliceIndex = Math.floor(pointingAt / sliceAngleDeg);
+      
+      const prevNormalizedRotation = (lastTickRotationRef.current % 360 + 360) % 360;
+      const prevPointingAt = (360 - prevNormalizedRotation + 270) % 360;
+      const prevSliceIndex = Math.floor(prevPointingAt / sliceAngleDeg);
+
+      if (currentSliceIndex !== prevSliceIndex) {
+        audioService.playTick();
+      }
+      
+      lastTickRotationRef.current = currentRotation;
       setRotation(currentRotation);
+
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
         setIsSpinning(false);
         const finalRotation = currentRotation % 360;
-        const sliceAngle = 360 / listToUse.length;
         const adjustedRotation = (360 - (finalRotation % 360) + 270) % 360;
-        const winnerIndex = Math.floor(adjustedRotation / sliceAngle) % listToUse.length;
+        const winnerIndex = Math.floor(adjustedRotation / sliceAngleDeg) % listToUse.length;
         const winner = listToUse[winnerIndex] as Participant;
         
-        // Trọng số giải thưởng
         const totalWeight = prizes.reduce((acc, p) => acc + p.weight, 0);
         let randomWeight = Math.random() * totalWeight;
         let selectedPrize = prizes[0];
@@ -138,26 +143,14 @@ const Wheel: React.FC<WheelProps> = ({ participants, prizes, onSpinEnd }) => {
   return (
     <div className="flex flex-col items-center">
       <div className="relative">
-        {/* Kim chỉ */}
         <div className="absolute top-[-25px] left-1/2 transform -translate-x-1/2 z-30">
           <div className="w-0 h-0 border-l-[22px] border-l-transparent border-r-[22px] border-r-transparent border-t-[45px] border-t-yellow-400 drop-shadow-[0_6px_8px_rgba(0,0,0,0.6)]"></div>
-          <div className="absolute top-[-5px] left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full shadow-inner opacity-50"></div>
+          <div className="absolute top-[-5px] left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full opacity-50 shadow-inner"></div>
         </div>
-        
-        <canvas
-          ref={canvasRef}
-          width={520}
-          height={520}
-          className="rounded-full shadow-[0_0_80px_rgba(0,0,0,0.8)] border-4 border-yellow-500/30 bg-white/5 backdrop-blur-[2px]"
-        />
+        <canvas ref={canvasRef} width={520} height={520} className="rounded-full shadow-[0_0_80px_rgba(0,0,0,0.8)] border-4 border-yellow-500/30 bg-white/5 backdrop-blur-[2px]" />
       </div>
-      
-      <button
-        onClick={spin}
-        disabled={isSpinning || participants.length === 0}
-        className="mt-12 px-20 py-5 bg-gradient-to-r from-red-700 via-red-500 to-red-700 hover:from-red-600 hover:to-red-600 text-white font-black text-4xl rounded-full shadow-[0_15px_30px_rgba(0,0,0,0.4)] transform transition hover:scale-105 active:scale-95 disabled:opacity-50 uppercase tracking-[0.2em] border-4 border-yellow-400/50"
-      >
-        {isSpinning ? '...' : 'QUAY'}
+      <button onClick={spin} disabled={isSpinning || participants.length === 0} className="mt-12 px-20 py-5 bg-gradient-to-r from-red-700 via-red-500 to-red-700 hover:from-red-600 hover:to-red-600 text-white font-black text-4xl rounded-full shadow-[0_15px_30px_rgba(0,0,0,0.4)] transform transition hover:scale-105 active:scale-95 disabled:opacity-50 uppercase tracking-[0.2em] border-4 border-yellow-400/50">
+        {isSpinning ? 'ĐANG QUAY...' : 'Một Trùy'}
       </button>
     </div>
   );
